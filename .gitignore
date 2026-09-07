@@ -1,0 +1,8 @@
+# Ignore data, logs and checkpoint directories
+data/
+data/logs/
+data/performance/
+data/checkpoint/
+# Ignore virtual environment and Python cache
+.venv/
+__pycache__/
