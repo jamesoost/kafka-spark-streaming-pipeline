@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from pyspark.sql import SparkSession
 from pyspark.sql import streaming
-from pyspark.sql.functions import avg, count, sum, from_json, col, to_timestamp, current_timestamp, window
+from pyspark.sql.functions import avg, count, split, sum, from_json, col, to_timestamp, current_timestamp, window
 from pyspark.sql.types import StructType, StringType, IntegerType
 
 
@@ -130,19 +130,12 @@ def process_input_data(lines):
     logger.info("Input data processed successfully")
     return events, schema
 
-def create_output_path_raw(base_path_raw=project_root / "data/raw"):
-    pathlib.Path(base_path_raw).mkdir(parents=True, exist_ok=True)
-    return base_path_raw
+def create_output_paths(name: str):
+    path = project_root / f"data/{name}"
+    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+    return path
 
-def create_output_path_late(base_path_late=project_root / "data/late"):
-    pathlib.Path(base_path_late).mkdir(parents=True, exist_ok=True)
-    return base_path_late
-
-def create_output_path_aggregated(base_path_aggregated=project_root / "data/aggregated"):
-    pathlib.Path(base_path_aggregated).mkdir(parents=True, exist_ok=True)
-    return base_path_aggregated
-
-def write_raw_output_data(events, output_path_raw=create_output_path_raw()):
+def write_raw_output_data(events, output_path_raw=create_output_paths("raw")):
     logger = logging.getLogger(__name__)
     logger.info("Writing raw output data")
     query = events.writeStream \
@@ -154,11 +147,20 @@ def write_raw_output_data(events, output_path_raw=create_output_path_raw()):
     logger.info("Raw output data write started")
     return query
 
-def validate_events(events):
+def split_late_events(events, watermark_threshold):
+    on_time_events = events.filter(
+        (col("ingest_timestamp").cast("long") - col("event_timestamp").cast("long")) <= watermark_threshold
+    )
+    late_events = events.filter(
+        (col("ingest_timestamp").cast("long") - col("event_timestamp").cast("long")) > watermark_threshold
+    )
+    return on_time_events, late_events
+
+def validate_events(on_time_events):
     required_columns = ["user_id", "event", "value", "product_id", "category", "region", "metadata", "event_timestamp"]
     valid_condition = " AND ".join([f"{c} IS NOT NULL" for c in required_columns]) + " AND corrupt_record IS NULL"
-    valid = events.filter(valid_condition)
-    invalid = events.filter(f"NOT ({valid_condition})")
+    valid = on_time_events.filter(valid_condition)
+    invalid = on_time_events.filter(f"NOT ({valid_condition})")
     return valid, invalid
 
 ## def debug_invalid_events(invalid):
@@ -170,8 +172,8 @@ def validate_events(events):
 ##    return query
 
 
-def aggregate_events(events):
-    return events \
+def aggregate_events(valid):
+    return valid \
         .withWatermark(
             "event_timestamp", 
             f"{watermark_threshold} seconds") \
@@ -187,13 +189,37 @@ def aggregate_events(events):
             avg("value").alias("average_value")
         )
 
+def output_invalid_events(invalid, output_path_invalid=create_output_paths("invalid")):
+    logger = logging.getLogger(__name__)
+    logger.info("Writing invalid output data")
+    query = invalid.writeStream \
+        .format("json") \
+        .outputMode("append") \
+        .option("path", str(output_path_invalid)) \
+        .option("checkpointLocation", str(output_path_invalid / "_checkpoint")) \
+        .start()
+    logger.info("Invalid output data write started")
+    return query
+
+def write_dead_letter_events(late_events, output_path_dead_letter=create_output_paths("dead_letter")):
+    logger = logging.getLogger(__name__)
+    logger.info("Writing dead letter output data")
+    query = late_events.writeStream \
+        .format("json") \
+        .outputMode("append") \
+        .option("path", str(output_path_dead_letter)) \
+        .option("checkpointLocation", str(output_path_dead_letter / "_checkpoint")) \
+        .start()
+    logger.info("Dead letter output data write started")
+    return query
+
 ## def late_events(events):
 ##    return events.filter(
 ##        (col("ingest_timestamp").cast("long") - col("event_timestamp").cast("long")) > watermark_threshold
 ##        )
 
 
-## def write_late_output_data(late_events, output_path_late=create_output_path_late()):
+## def write_late_output_data(late_events, output_path_late=OutputPaths.create_output_path_late()):
 #    pathlib.Path(output_path_late).mkdir(parents=True, exist_ok=True)
 #    logger = logging.getLogger(__name__)
 #    logger.info("Writing late output data")
@@ -205,7 +231,7 @@ def aggregate_events(events):
 ##    logger.info("Late output data write started")
 ##    return query
 
-def write_aggregated_output_data(aggregated_events, output_path_aggregated=create_output_path_aggregated()):
+def write_aggregated_output_data(aggregated_events, output_path_aggregated=create_output_paths("aggregated")):
     pathlib.Path(output_path_aggregated).mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger(__name__)
     logger.info("Writing aggregated output data")
@@ -227,7 +253,10 @@ if __name__ == "__main__":
         lines = read_input_data(spark)
         events, schema = process_input_data(lines)
         write_raw_output_data(events)
-        valid_events, invalid_events = validate_events(events)
+        on_time_events, late_events = split_late_events(events, watermark_threshold)
+        write_dead_letter_events(late_events)
+        valid_events, invalid_events = validate_events(on_time_events)
+        output_invalid_events(invalid_events)
         aggregated_events = aggregate_events(valid_events)
         ## debug_invalid_events(invalid_events)
         write_aggregated_output_data(aggregated_events)

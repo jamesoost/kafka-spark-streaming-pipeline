@@ -6,3 +6,5 @@ data/checkpoint/
 # Ignore virtual environment and Python cache
 .venv/
 __pycache__/
+
+test/.ruff_cache
