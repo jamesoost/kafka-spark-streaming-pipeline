@@ -1,0 +1,2 @@
+{"window":{"start":"2026-09-16T11:52:00.000+02:00","end":"2026-09-16T11:53:00.000+02:00"},"event":"purchase","category":"electronics","region":"eu-central-1","total_value":15222,"event_count":19,"average_value":801.1578947368421}
+{"window":{"start":"2026-09-16T11:52:00.000+02:00","end":"2026-09-16T11:53:00.000+02:00"},"event":"click","category":"books","region":"us-west-2","total_value":9720,"event_count":15,"average_value":648.0}

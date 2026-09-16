@@ -3,7 +3,7 @@ import time, uuid, random
 import requests
 
 REST_ENDPOINT = "http://localhost:8082"
-CLUSTER_ID = "MkU3OEVBNTcwNTJENDM2Qg"
+CLUSTER_ID = "MkU3OEVBNTcwNTJENDM2Qf"
 TOPIC = "events"
 
 def maybe_none(value, probability=0.05):

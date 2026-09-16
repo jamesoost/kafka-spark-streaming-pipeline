@@ -1,0 +1,2 @@
+{"user_id":"43107691-31aa-42b4-ad30-6b28fb894d38","event":"view","value":1357,"product_id":"cf5dad79-1283-4df1-afdd-7d9055e2b221","region":"us-west-2","metadata":{"source":"web"},"event_timestamp":"2026-09-16T11:51:26.000+02:00","ingest_timestamp":"2026-09-16T11:51:27.028+02:00"}
+{"user_id":"cd3d1365-552e-4509-a0de-1a5f2c2fb620","event":"purchase","value":419,"product_id":"56b9aa63-ae8a-472f-b8c7-5be5082f0464","category":"books","metadata":{"source":"mobile"},"event_timestamp":"2026-09-16T11:51:26.000+02:00","ingest_timestamp":"2026-09-16T11:51:27.028+02:00"}
