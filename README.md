@@ -1,6 +1,6 @@
-# Streaming Integration
+# Kafka Spark Streaming Pipeline
 
-[![CI](https://img.shields.io/github/actions/workflow/status/jamesoost/steaming-integration/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/jamesoost/steaming-integration/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/jamesoost/kafka-spark-streaming-pipeline/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/jamesoost/kafka-spark-streaming-pipeline/actions/workflows/ci.yml)
 
 A Spark Structured Streaming pipeline that ingests synthetic e-commerce events from Kafka, using common streaming-ingestion patterns: schema validation, an ingestion-time  late-event routing rule and Spark event-time watermarking, a dead-letter path for late events, an invalid-record path for malformed/incomplete data, and windowed aggregation of the remaining valid events. A local Kafka broker and synthetic event producer are included so the pipeline can be run end-to-end without any external infrastructure.
 
